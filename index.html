@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AKOYA MINI MART — POS</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f9d58">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="AKOYA POS">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+
+<style>
+:root{
+  --primary:#0f9d58; --primary-dark:#0b7a43; --bg:#f4f7f5; --card:#ffffff;
+  --text:#1c2b23; --muted:#6b7c73; --border:#e1e8e3; --danger:#e0433c; --warn:#f0a500;
+  --shadow:0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+}
+[data-theme="dark"]{
+  --bg:#121815; --card:#1b2420; --text:#e8f3ec; --muted:#93a59b; --border:#2b3730;
+  --shadow:0 1px 3px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);transition:background .2s,color .2s;}
+.app{display:flex;min-height:100vh;}
+.sidebar{width:220px;background:#0e2e1e;color:#fff;display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;}
+.nav-btn{background:none;border:none;color:#c8e6d5;text-align:left;padding:14px 20px;font-size:14.5px;cursor:pointer;display:flex;gap:10px;align-items:center;transition:background .15s;}
+.nav-btn.active{background:var(--primary);color:#fff;font-weight:600;}
+.nav-btn.soon{opacity:.45;cursor:default;}
+.theme-toggle{margin:14px 20px 0;padding:9px 14px;border:1px solid #2b4a3a;border-radius:20px;background:none;color:#c8e6d5;cursor:pointer;font-size:13px;text-align:center;}
+.content{flex:1;width:calc(100% - 220px);min-width:0;padding:24px 28px;max-width:100%;overflow-x:hidden;}
+.tab{display:none;} .tab.active{display:block;}
+h2{margin-bottom:16px;font-size:20px;}
+.hero{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:#fff;border-radius:16px;padding:26px;margin-bottom:20px;box-shadow:var(--shadow);}
+.hero h2{margin:0 0 4px;font-size:24px;}
+.hero p{opacity:.9;font-size:13.5px;}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow);transition:transform .15s;}
+.card:hover{transform:translateY(-2px);}
+.card .label{font-size:12.5px;color:var(--muted);}
+.card .val{font-size:22px;font-weight:700;margin-top:4px;}
+.grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;}
+@media(max-width:900px){
+  .grid2{grid-template-columns:1fr;}
+  .app{flex-direction:column;}
+  .sidebar{width:100%;flex-direction:row;overflow-x:auto;padding:8px;position:sticky;top:0;z-index:40;order:2;position:fixed;bottom:0;left:0;border-top:1px solid #1e4632;}
+  .brand,.theme-toggle{display:none;}
+  .nav-btn{flex-direction:column;font-size:10.5px;padding:8px 10px;gap:2px;white-space:nowrap;}
+  .content{order:1;padding:16px;padding-bottom:80px;}
+}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow);}
+.search{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:12px;font-size:14px;background:var(--card);color:var(--text);}
+.prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;max-height:460px;overflow-y:auto;}
+.prod{border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;background:#fafcfb;transition:.15s;}
+.prod:hover{border-color:var(--primary);}
+.prod b{display:block;font-size:13.5px;}
+.prod small{color:var(--muted);}
+.prod .p{color:var(--primary-dark);font-weight:700;margin-top:4px;}
+.low{color:var(--danger);font-weight:600;}
+table{width:100%;border-collapse:collapse;font-size:13.5px;}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+.cart-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13.5px;}
+.cart-item button{background:none;border:none;color:var(--danger);cursor:pointer;font-size:15px;}
+.qty-btn{width:22px;height:22px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer;}
+.totalrow{display:flex;justify-content:space-between;padding:6px 0;font-size:14px;}
+.totalrow.grand{font-weight:700;font-size:17px;border-top:2px solid var(--border);margin-top:6px;padding-top:10px;}
+button.primary{background:var(--primary);color:#fff;border:none;padding:12px;border-radius:8px;width:100%;font-size:15px;font-weight:600;cursor:pointer;margin-top:10px;transition:opacity .15s;}
+button.primary:hover{opacity:.9;}
+button.ghost{background:none;border:1px solid var(--border);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text);}
+input,select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;width:100%;margin-bottom:8px;background:var(--card);color:var(--text);}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:50;}
+.modal-bg.show{display:flex;}
+.modal{background:var(--card);border-radius:12px;padding:22px;width:340px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,.2);}
+.badge{font-size:11px;padding:2px 8px;border-radius:20px;background:#fdf1dd;color:#8a5a00;}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.pill{font-size:11.5px;background:#e6f6ec;color:var(--primary-dark);padding:3px 9px;border-radius:20px;}
+.tabs2{display:flex;gap:8px;margin-bottom:14px;}
+.tabs2 button{padding:7px 14px;border:1px solid var(--border);background:#fff;border-radius:20px;cursor:pointer;font-size:13px;}
+.tabs2 button.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+#print-receipt{display:none;}
+@media print{
+  body *{visibility:hidden;}
+  #print-receipt, #print-receipt *{visibility:visible;}
+  #print-receipt{display:block;position:fixed;top:0;left:0;width:100%;font-family:monospace;padding:10px;}
+}
+.receipt-line{display:flex;justify-content:space-between;font-size:12px;}
+.barcode-input{font-size:19px;padding:14px;border:2px solid var(--primary);border-radius:10px;}
+.suggest{border:1px solid var(--border);border-radius:8px;max-height:180px;overflow-y:auto;margin-bottom:10px;display:none;background:#fff;}
+.suggest div{padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13.5px;display:flex;justify-content:space-between;}
+.suggest div:hover{background:#f2f8f4;}
+.toggle-group{display:flex;gap:8px;margin-bottom:10px;}
+.toggle-group button{flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-weight:600;font-size:13.5px;}
+.toggle-group button.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+.tx-table td,.tx-table th{font-size:13px;}
+.tx-table input{width:55px;margin:0;padding:4px;text-align:center;}
+.tx-table tbody tr{border-bottom:1px solid var(--border);}
+.tx-table tbody tr:nth-child(even){background:rgba(15,157,88,.05);}
+.tx-table tbody tr:hover{background:rgba(15,157,88,.1);}
+.brand{display:flex;align-items:center;gap:10px;padding:0 20px 18px;border-bottom:1px solid #1e4632;margin-bottom:8px;}
+.logo-badge{width:36px;height:36px;border-radius:9px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0;}
+.brand b{font-size:14.5px;display:block;}
+.brand small{color:#9db8a9;font-size:11px;}
+</style>
+
+<style>
+/* GroceryGo Professional Upgrade */
+.stat-grid{display:grid;grid-template-columns:repeat(5,minmax(140px,1fr));gap:12px;margin-bottom:18px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px;box-shadow:var(--shadow)}
+.stat-card .num{font-size:21px;font-weight:800;margin-top:5px}
+.page-title{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.muted{color:var(--muted);font-size:12.5px}.actions{display:flex;gap:8px;flex-wrap:wrap}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.form-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.span-2{grid-column:span 2}.empty{text-align:center;padding:22px;color:var(--muted)}
+@media(max-width:1100px){.stat-grid{grid-template-columns:repeat(3,1fr)}.form-grid.three{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.stat-grid{grid-template-columns:repeat(2,1fr)}.form-grid,.form-grid.three{grid-template-columns:1fr}.span-2{grid-column:auto}.mobile-scroll{overflow-x:auto}.mobile-scroll table{min-width:720px}}
+
+/* Corporate procurement / purchases UI */
+.nav-icon{display:inline-flex;width:20px;min-width:20px;height:20px;align-items:center;justify-content:center;font-size:16px;line-height:1;color:currentColor;font-weight:700}
+.purchase-nav-icon{font-size:17px}
+.purchase-hero{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px 22px;margin-bottom:16px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(135deg,var(--card),rgba(15,157,88,.045));box-shadow:var(--shadow)}
+.purchase-title-wrap{display:flex;align-items:center;gap:15px;min-width:0}
+.purchase-icon-box{width:48px;height:48px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex:0 0 48px;background:var(--primary);color:#fff;box-shadow:0 7px 18px rgba(15,157,88,.18);font-size:23px;font-weight:800}
+.eyebrow{font-size:10px;letter-spacing:1.2px;font-weight:800;color:var(--primary);margin-bottom:3px}
+.purchase-hero h2{margin:0 0 3px;font-size:21px;letter-spacing:-.2px}
+.purchase-hero .muted{max-width:720px;margin:0;line-height:1.45}
+.purchase-main-btn{width:auto;min-width:150px;white-space:nowrap;font-weight:800;box-shadow:0 5px 14px rgba(15,157,88,.16)}
+.purchase-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.purchase-kpi{padding:15px 17px;border:1px solid var(--border);border-radius:13px;background:var(--card);box-shadow:var(--shadow);min-width:0}
+.purchase-kpi-label{display:block;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.55px}
+.purchase-kpi strong{display:block;margin-top:5px;font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.purchase-kpi small{display:block;margin-top:4px;color:var(--muted);font-size:11px}
+.purchase-table-panel{padding:0;overflow:hidden}
+.purchase-table-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 18px;border-bottom:1px solid var(--border)}
+.purchase-table-head h3{margin:0;font-size:15px}
+.purchase-table-head p{margin:4px 0 0;color:var(--muted);font-size:11.5px}
+.purchase-secure-badge{font-size:11px;font-weight:700;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:6px 9px;white-space:nowrap}
+.purchase-secure-badge span{color:var(--primary);margin-right:4px}
+.purchase-note{margin:14px 18px;padding:10px 12px;border:1px solid rgba(15,157,88,.18);border-radius:10px;background:rgba(15,157,88,.045);display:flex;gap:9px;align-items:flex-start;color:var(--muted);font-size:11.5px;line-height:1.45}
+.note-icon{width:17px;height:17px;min-width:17px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--primary);color:#fff;font-size:10px;font-weight:800}
+.purchase-table{margin:0}
+.purchase-table thead th{font-size:11px;text-transform:uppercase;letter-spacing:.45px;color:var(--muted);background:rgba(0,0,0,.018);white-space:nowrap}
+.purchase-table tbody td{font-size:12.5px;padding:12px 10px}
+.purchase-table tbody tr{transition:background .15s ease}
+.purchase-table tbody tr:hover{background:rgba(15,157,88,.045)}
+@media(max-width:760px){.purchase-hero{align-items:stretch;flex-direction:column;padding:16px}.purchase-main-btn{width:100%}.purchase-kpis{grid-template-columns:1fr}.purchase-table-head{align-items:flex-start;flex-direction:column}.purchase-secure-badge{align-self:flex-start}.purchase-title-wrap{align-items:flex-start}.purchase-icon-box{width:42px;height:42px;flex-basis:42px;font-size:20px}}
+</style>
+
+<style id="pos-responsive-polish">
+/* POS responsive redesign */
+html,body{width:100%;max-width:100%;overflow-x:hidden;}
+body{min-width:0;}
+.app{width:100%;min-width:0;}
+.content{min-width:0;width:calc(100% - 220px);overflow-x:hidden;}
+.pos-header{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:18px;padding:22px 24px;border-radius:16px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;box-shadow:0 8px 24px rgba(15,157,88,.18);}
+.pos-header h1{font-size:25px;line-height:1.1;letter-spacing:.3px;margin:2px 0 5px;}
+.pos-header p{font-size:13px;opacity:.9;margin:0;}
+.pos-eyebrow{font-size:10px;letter-spacing:1.4px;font-weight:800;opacity:.78;margin-bottom:4px;}
+.pos-eyebrow.green{color:var(--primary);opacity:1;}
+.pos-header-badge{flex:0 0 auto;padding:8px 12px;border:1px solid rgba(255,255,255,.28);border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.5px;background:rgba(255,255,255,.10);}
+.pos-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(290px,.85fr);gap:18px;align-items:start;}
+.pos-cart-panel,.pos-summary-panel{min-width:0;}
+.pos-section-title,.pos-summary-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px;}
+.pos-section-title h2,.pos-summary-head h2{font-size:17px;margin:0 0 2px;}
+.pos-section-title .muted{font-size:11.5px;}
+.pos-live-badge{font-size:10px;font-weight:800;color:var(--primary-dark);background:rgba(15,157,88,.10);padding:5px 9px;border-radius:999px;}
+.pos-summary-head{padding-bottom:12px;border-bottom:1px solid var(--border);}
+.pos-summary-icon{width:38px;height:38px;border-radius:11px;background:rgba(15,157,88,.10);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;}
+.pos-summary-items{padding-top:5px;}
+.pos-summary-panel .grand{margin-top:9px;padding-top:13px;font-size:19px;}
+.pos-table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.pos-table-wrap .tx-table{min-width:760px;}
+.barcode-input{margin-bottom:10px;background:var(--card);color:var(--text);width:100%;}
+
+@media(max-width:1100px){
+  .sidebar{width:190px;}
+  .content{width:calc(100% - 190px);padding:20px;}
+  .pos-grid{grid-template-columns:minmax(0,1.45fr) minmax(270px,.85fr);gap:14px;}
+}
+@media(max-width:900px){
+  .app{display:block;min-height:100vh;}
+  .content{width:100%;padding:14px 12px 88px;overflow-x:hidden;}
+  .pos-grid{grid-template-columns:1fr;gap:12px;}
+  .pos-header{padding:18px 16px;border-radius:13px;margin-bottom:12px;}
+  .pos-header h1{font-size:21px;}
+  .pos-header p{font-size:12px;}
+  .pos-header-badge{font-size:9px;padding:7px 9px;}
+  .panel{max-width:100%;}
+  .pos-summary-panel{order:2;}
+  .pos-cart-panel{order:1;}
+}
+@media(max-width:560px){
+  .content{padding-left:9px;padding-right:9px;}
+  .pos-header{align-items:flex-start;flex-direction:column;gap:10px;padding:16px 14px;}
+  .pos-header-badge{align-self:flex-start;}
+  .pos-cart-panel,.pos-summary-panel{padding:13px;}
+  .pos-section-title,.pos-summary-head{align-items:flex-start;}
+  .pos-section-title .muted{display:block;max-width:230px;line-height:1.35;}
+  .barcode-input{font-size:16px;padding:12px;}
+}
+</style>
+<style id="grocerygo-final-fix">
+/* Final consistency pass: preserve the original layout while removing hard-coded light surfaces in dark mode. */
+[data-theme="dark"] .prod,
+[data-theme="dark"] .qty-btn,
+[data-theme="dark"] .tabs2 button,
+[data-theme="dark"] .toggle-group button,
+[data-theme="dark"] .suggest,
+[data-theme="dark"] .suggest div {
+  background:var(--card);
+  color:var(--text);
+}
+[data-theme="dark"] .tabs2 button,
+[data-theme="dark"] .toggle-group button,
+[data-theme="dark"] .qty-btn {
+  border-color:var(--border);
+}
+[data-theme="dark"] .suggest div:hover,
+[data-theme="dark"] .prod:hover {
+  background:rgba(15,157,88,.10);
+}
+
+/* Keep dense business tables usable on phones without making the whole page overflow. */
+.table-wrap,.mobile-scroll{
+  max-width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.table-wrap table,.mobile-scroll table{
+  min-width:680px;
+}
+.panel,.content,.tab{min-width:0;max-width:100%;}
+img{max-width:100%;height:auto;}
+
+@media(max-width:900px){
+  .content{
+    width:100%;
+    min-width:0;
+    overflow-x:hidden;
+    padding-left:12px;
+    padding-right:12px;
+  }
+  .app{min-width:0;}
+  .toolbar{gap:10px;}
+  .toolbar>div{max-width:100%;}
+  .form-grid{grid-template-columns:minmax(0,1fr);}
+  .span-2{grid-column:auto;}
+  .grid2{grid-template-columns:minmax(0,1fr);}
+  .purchase-main-btn{width:100%!important;}
+  .purchase-hero{padding:16px;}
+  .purchase-kpis{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+@media(max-width:600px){
+  .content{padding-left:10px;padding-right:10px;}
+  .panel{padding:13px;}
+  .hero{padding:18px 15px;}
+  .hero h2{font-size:20px;line-height:1.25;}
+  .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .cards{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .purchase-kpis{grid-template-columns:1fr;}
+  .purchase-kpi{min-width:0;}
+  .modal{
+    width:calc(100vw - 20px)!important;
+    max-width:none!important;
+    max-height:calc(100dvh - 20px);
+    overflow-y:auto;
+  }
+  .tabs2{overflow-x:auto;white-space:nowrap;}
+  .tabs2 button{flex:0 0 auto;}
+  input,select,button{max-width:100%;}
+}
+@media(max-width:380px){
+  .cards,.stat-grid{grid-template-columns:1fr;}
+}
+</style>
+
+<style>
+.quick-actions-panel .actions{display:flex;flex-wrap:wrap;gap:8px}
+.payment-box{margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:10px;background:rgba(15,157,88,.06)}
+.payment-box>div{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
+.payment-box .change-row{border-top:1px dashed var(--border);margin-top:5px;padding-top:7px;font-size:15px}
+.mini-type{display:flex;gap:3px;justify-content:center}.mini-type button{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer}.mini-type button.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.sync-status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}.sync-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px}.sync-card span{display:block;color:var(--muted);font-size:11px}.sync-card b{display:block;margin-top:4px;font-size:13px}.sync-message{margin-top:10px;padding:10px;border-radius:9px;background:rgba(15,157,88,.08);font-size:12px}.receipt-preview-wrap{display:flex;justify-content:center;background:var(--bg);border:1px dashed var(--border);border-radius:12px;padding:16px;overflow:auto}.receipt-preview{width:58mm;min-width:58mm;background:#fff;color:#000;padding:10px;font-family:monospace;font-size:11px;line-height:1.35;box-shadow:0 2px 10px rgba(0,0,0,.08)}.receipt-center{text-align:center}.receipt-dash{white-space:nowrap;overflow:hidden;margin:4px 0}.receipt-footer{margin-top:8px}
+.danger{border:1px solid #c33;background:transparent;color:#c33;border-radius:9px;padding:9px 12px;cursor:pointer;font-weight:600}.danger:hover{background:rgba(200,0,0,.07)}
+@media(max-width:800px){.sync-status-grid{grid-template-columns:1fr}.receipt-preview{width:58mm;min-width:58mm}.tx-table{min-width:760px}.panel:has(.tx-table){overflow-x:auto}}
+</style>
+
+<style id="pos-universal-responsive">
+/* Universal POS responsive layer */
+*,*::before,*::after{box-sizing:border-box}
+html{width:100%;min-width:0;overflow-x:hidden;-webkit-text-size-adjust:100%}
+body{width:100%;min-width:0;overflow-x:hidden}
+.app{width:100%;min-width:0}
+.content{flex:1 1 auto;min-width:0;width:auto;max-width:none;overflow-x:hidden}
+
+/* POS header */
+#pos .pos-header{width:100%;min-width:0}
+#pos .pos-header>div:first-child{min-width:0;flex:1 1 auto}
+#pos .pos-header h1,#pos .pos-header p{overflow-wrap:anywhere}
+
+/* Main POS columns */
+#pos .pos-grid{width:100%;min-width:0;grid-template-columns:minmax(0,1fr) minmax(280px,360px)}
+#pos .pos-cart-panel,#pos .pos-summary-panel{width:100%;min-width:0}
+#pos .pos-table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden}
+#pos .pos-table-wrap table{width:100%;min-width:760px}
+#pos .pos-cart-panel{overflow:hidden}
+#pos .pos-summary-panel{overflow:hidden}
+#pos input,#pos select,#pos button{max-width:100%}
+
+/* Laptop / small desktop */
+@media (max-width:1100px){
+  .sidebar{width:190px}
+  .content{padding:20px}
+  #pos .pos-grid{grid-template-columns:minmax(0,1fr) minmax(250px,320px);gap:14px}
+}
+
+/* Tablet: turn navigation into a bottom web-app bar */
+@media (max-width:900px){
+  .app{display:block;min-height:100dvh}
+  .sidebar{
+    position:fixed!important;left:0;right:0;bottom:0;top:auto!important;
+    width:100%!important;height:auto;min-height:64px;z-index:100;
+    display:flex!important;flex-direction:row!important;align-items:stretch;
+    gap:0;padding:6px max(6px,env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom));
+    overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+    background:#0e2e1e;border-top:1px solid #28533e;
+  }
+  .sidebar .brand,.sidebar .theme-toggle{display:none!important}
+  .sidebar .nav-btn{
+    flex:0 0 76px;width:76px;min-width:76px;height:54px;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;
+    gap:3px;padding:5px 6px;margin:0;border-radius:9px;
+    text-align:center;font-size:10px;line-height:1.1;white-space:normal;
+  }
+  .sidebar .nav-btn .label{display:block;max-width:70px;overflow:hidden;text-overflow:ellipsis}
+  .content{width:100%!important;padding:14px 12px calc(88px + env(safe-area-inset-bottom));overflow-x:hidden}
+  #pos .pos-grid{grid-template-columns:1fr;gap:12px}
+  #pos .pos-cart-panel{order:1}
+  #pos .pos-summary-panel{order:2}
+  #pos .pos-header{margin-bottom:12px}
+}
+
+/* Phones */
+@media (max-width:600px){
+  .content{padding-left:10px;padding-right:10px}
+  #pos .pos-header{
+    flex-direction:column;align-items:flex-start;gap:10px;
+    padding:17px 15px;border-radius:13px;
+  }
+  #pos .pos-header h1{font-size:21px;line-height:1.15}
+  #pos .pos-header p{font-size:12px;line-height:1.4}
+  #pos .pos-header-badge{align-self:flex-start}
+  #pos .pos-cart-panel,#pos .pos-summary-panel{padding:13px;border-radius:12px}
+  #pos .pos-section-title,#pos .pos-summary-head{align-items:flex-start}
+  #pos .pos-section-title .muted{line-height:1.35}
+  #pos .barcode-input{font-size:16px;padding:12px}
+  #pos .pos-table-wrap{margin-left:-2px;margin-right:-2px;width:calc(100% + 4px)}
+  #pos .pos-table-wrap table{min-width:720px}
+  #pos .totalrow{font-size:13.5px}
+  #pos .pos-summary-panel .grand{font-size:18px}
+}
+
+/* Very small phones */
+@media (max-width:380px){
+  .sidebar .nav-btn{flex-basis:70px;min-width:70px;width:70px;font-size:9.5px}
+  .content{padding-left:8px;padding-right:8px}
+  #pos .pos-header h1{font-size:19px}
+  #pos .pos-header{padding:15px 13px}
+}
+
+/* Landscape phones: keep content usable without forcing desktop columns */
+@media (max-width:900px) and (orientation:landscape){
+  .sidebar{min-height:58px}
+  .sidebar .nav-btn{height:46px}
+  .content{padding-bottom:76px}
+}
+</style>
+
+
+<style id="mobile-hamburger-responsive">
+/* Mobile web-app navigation: hamburger + animated slide-out drawer */
+.mobile-topbar,.mobile-backdrop{display:none}
+@media (max-width:900px){
+  body.menu-open{overflow:hidden}
+  .mobile-topbar{
+    position:sticky;top:0;z-index:110;
+    height:58px;display:flex;align-items:center;gap:12px;
+    padding:8px 12px;
+    background:linear-gradient(135deg,#0e2e1e,#0b7a43);
+    color:#fff;box-shadow:0 3px 14px rgba(0,0,0,.14);
+  }
+  .mobile-menu-btn{
+    width:42px;height:42px;flex:0 0 42px;border:0;border-radius:11px;
+    background:rgba(255,255,255,.12);color:#fff;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+    transition:background .2s,transform .2s;touch-action:manipulation;
+  }
+  .mobile-menu-btn:active{transform:scale(.94);background:rgba(255,255,255,.2)}
+  .mobile-menu-btn span{display:block;width:21px;height:2px;border-radius:3px;background:#fff;transition:transform .25s,opacity .2s}
+  .mobile-menu-btn.is-open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+  .mobile-menu-btn.is-open span:nth-child(2){opacity:0}
+  .mobile-menu-btn.is-open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+  .mobile-topbar-title{min-width:0;line-height:1.05}
+  .mobile-topbar-title strong{display:block;font-size:15px;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mobile-topbar-title small{display:block;font-size:10px;opacity:.78;margin-top:3px;white-space:nowrap}
+  .mobile-backdrop{
+    position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.42);
+    opacity:0;pointer-events:none;transition:opacity .25s;display:block;
+  }
+  .mobile-backdrop.show{opacity:1;pointer-events:auto}
+  .sidebar{
+    position:fixed!important;left:0;top:0;bottom:0;right:auto!important;
+    width:min(285px,82vw)!important;height:100dvh!important;min-height:0!important;
+    z-index:130!important;display:flex!important;flex-direction:column!important;
+    align-items:stretch!important;padding:18px 10px calc(18px + env(safe-area-inset-bottom))!important;
+    overflow-y:auto!important;overflow-x:hidden!important;
+    transform:translateX(-105%);transition:transform .28s cubic-bezier(.22,.8,.25,1);
+    box-shadow:12px 0 35px rgba(0,0,0,.22);border-right:1px solid #28533e;
+  }
+  .sidebar.menu-open{transform:translateX(0)}
+  .sidebar .brand{display:flex!important;padding:6px 10px 18px;margin-bottom:10px}
+  .sidebar .theme-toggle{display:block!important;margin:12px 10px 0}
+  .sidebar .nav-btn{
+    flex:0 0 auto!important;width:100%!important;min-width:0!important;height:48px!important;
+    display:flex!important;flex-direction:row!important;justify-content:flex-start!important;align-items:center!important;
+    gap:12px!important;padding:10px 14px!important;margin:2px 0!important;border-radius:11px!important;
+    text-align:left!important;font-size:13.5px!important;line-height:1.2!important;white-space:nowrap!important;
+  }
+  .sidebar .nav-btn .label{display:block!important;max-width:none!important;overflow:visible!important;text-overflow:clip!important}
+  .content{padding-top:14px!important;padding-bottom:24px!important}
+  .app{display:block!important;min-height:0!important}
+  .pos-header{margin-top:0}
+}
+@media (max-width:600px){
+  .mobile-topbar{height:56px;padding-left:10px;padding-right:10px}
+  .mobile-menu-btn{width:40px;height:40px;flex-basis:40px}
+  .content{padding-left:10px!important;padding-right:10px!important}
+}
+@media (max-width:900px) and (orientation:landscape){
+  .mobile-topbar{height:52px}
+  .content{padding-top:12px!important}
+  #pos .pos-grid{grid-template-columns:minmax(0,1fr) minmax(270px,34vw);align-items:start}
+  #pos .pos-cart-panel{order:1}.pos-summary-panel{order:2}
+}
+</style>
+
+
+<style id="pwa-install-style">
+#pwa-install-btn{display:none;position:fixed;right:14px;bottom:78px;z-index:80;border:0;border-radius:999px;background:#0f9d58;color:#fff;padding:10px 14px;font-weight:700;font-size:13px;box-shadow:0 5px 18px rgba(0,0,0,.2);cursor:pointer}
+#pwa-install-btn.show{display:block}
+#pwa-online-status{position:fixed;left:12px;bottom:78px;z-index:79;padding:6px 10px;border-radius:999px;background:#fff;border:1px solid #dce6df;color:#1c2b23;font-size:11px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+#pwa-online-status.offline{background:#fff4e5;color:#8a5a00}
+@media(min-width:901px){#pwa-install-btn,#pwa-online-status{bottom:16px}}
+</style>
+</head>
+<body>
+<div class="mobile-topbar">
+  <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="mobile-topbar-title">
+    <strong>POINT OF SALE</strong>
+    <small>AKOYA MINI MART</small>
+  </div>
+</div>
+<div class="mobile-backdrop" id="mobile-backdrop"></div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo-badge">A</div><div><b>AKOYA MINI MART</b><small>Professional Point of Sale System</small></div></div>
+    <button class="nav-btn active" data-tab="dashboard">▤ <span class="label">Dashboard</span></button>
+    <button class="nav-btn" data-tab="pos">▣ <span class="label">Point of Sale</span></button>
+    <button class="nav-btn" data-tab="inventory">◈ <span class="label">Inventory</span></button>
+    <button class="nav-btn" data-tab="purchases"><span class="nav-icon purchase-nav-icon">▥</span><span class="label">Purchases</span></button>
+    <button class="nav-btn" data-tab="suppliers">♙ <span class="label">Suppliers</span></button>
+    <button class="nav-btn" data-tab="reports">▥ <span class="label">Reports</span></button>
+    <button class="nav-btn" data-tab="printer">⎙ <span class="label">Printer Setup</span></button>
+    <button class="nav-btn" data-tab="expenses">₱ <span class="label">Expenses</span></button>
+    <button class="nav-btn" data-tab="sync">⇅ <span class="label">Sheets Sync</span></button>
+    <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">Dark Mode</button>
+  </aside>
+
+  <main class="content">
+    <section id="dashboard" class="tab active">
+      <div class="hero"><h2>Dashboard Overview</h2><p>Manage your products, sales, inventory and reports in one place.</p></div>
+      
+<div class="stat-grid">
+  <div class="stat-card"><div class="label">Today's Sales</div><div class="num" id="gg-dsales">₱0.00</div></div>
+  <div class="stat-card"><div class="label">Today's Expenses</div><div class="num" id="gg-dexp">₱0.00</div></div>
+  <div class="stat-card"><div class="label">Gross Profit</div><div class="num" id="gg-dgross">₱0.00</div></div>
+  <div class="stat-card"><div class="label">Transactions</div><div class="num" id="gg-dorders">0</div></div>
+  <div class="stat-card"><div class="label">Low Stock</div><div class="num" id="gg-dlow">0</div></div>
+</div>
+<div class="cards">
+        <div class="card"><div class="label">Today's Sales</div><div class="val" id="d-sales">₱0.00</div></div>
+        <div class="card"><div class="label">Orders Today</div><div class="val" id="d-orders">0</div></div>
+        <div class="card"><div class="label">Products</div><div class="val" id="d-products">0</div></div>
+        <div class="card"><div class="label">Low Stock</div><div class="val" id="d-low">0</div></div>
+      </div>
+      <div class="panel"><h2 style="font-size:16px">Recent Sales</h2><table id="d-recent"><tbody></tbody></table></div>
+      <div class="panel quick-actions-panel">
+        <div class="page-title"><div><h2 style="font-size:16px;margin:0">Quick Actions</h2><p class="muted">Important shortcuts for daily store operations.</p></div></div>
+        <div class="actions">
+        <p class="muted" style="margin:8px 0 0">Reset Today's Dashboard removes today's sales and expenses, restores stock from saved sale items, and syncs the reset to Google Sheets.</p>
+          <button class="primary" onclick="goTab('pos');clearCart();">＋ New Sale</button>
+          <button class="ghost" onclick="openModal();">＋ Add Product</button>
+          <button class="ghost" onclick="GG.openPurchase();">＋ New Purchase</button>
+          <button class="ghost" onclick="GG.openExpense();">＋ Add Expense</button>
+          <button class="ghost" onclick="syncPush();">⬆ Push Data</button>
+          <button class="ghost" onclick="syncPull();">⬇ Pull Data</button>
+          <button class="danger" onclick="resetTodayRecords();">↺ Reset Today's Dashboard</button>
+          <button class="danger" onclick="clearCart();goTab('pos');">↺ Reset Transaction</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="pos" class="tab">
+      <div class="pos-header">
+        <div>
+          <div class="pos-eyebrow">AKOYA MINI MART</div>
+          <h1>POINT OF SALE</h1>
+          <p>Scan a barcode or search a product to start a new transaction.</p>
+        </div>
+        <div class="pos-header-badge">● SALES COUNTER</div>
+      </div>
+      <div class="pos-grid">
+        <div class="panel pos-cart-panel">
+          <div class="pos-section-title">
+            <div><h2>Current Sale</h2><span class="muted">Choose Retail or Wholesale directly on each item.</span></div>
+            <span class="pos-live-badge">LIVE</span>
+          </div>
+          <input class="barcode-input" id="pos-search" placeholder="Scan barcode or type product name, then Enter..." autofocus>
+          <div class="suggest" id="pos-suggest"></div>
+          <div class="table-wrap pos-table-wrap"><table class="tx-table"><thead><tr><th>#</th><th>Barcode</th><th>Product</th><th>Type</th><th>Qty</th><th>Unit Price</th><th>Line Total</th><th></th></tr></thead>
+          <tbody id="tx-body"><tr id="tx-empty"><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">No items yet — scan or search a product above.</td></tr></tbody></table></div>
+        </div>
+        <div class="panel pos-summary-panel">
+          <div class="pos-summary-head">
+            <div><div class="pos-eyebrow green">TRANSACTION SUMMARY</div><h2>Sale Summary</h2></div>
+            <div class="pos-summary-icon">₱</div>
+          </div>
+          <div class="pos-summary-items">
+            <div class="totalrow"><span>Items</span><span id="c-items">0</span></div>
+            <div class="totalrow"><span>Subtotal</span><span id="c-sub">₱0.00</span></div>
+          </div>
+          <label style="font-size:12.5px">Discount (%)</label>
+          <input type="number" id="discount-pct" value="0" min="0" max="100" oninput="renderCart()">
+          <div class="totalrow"><span>Discount Amount</span><span id="c-discount">₱0.00</span></div>
+          <div class="totalrow grand"><span>Total</span><span id="c-total">₱0.00</span></div>
+          <label style="font-size:12.5px">Payment Method</label>
+          <select id="pay-method"><option>Cash</option><option>GCash</option><option>Maya</option><option>Bank Transfer</option></select>
+          <label style="font-size:12.5px">Cash Received / Buyer Money</label>
+          <input type="number" id="cash-received" min="0" step="0.01" placeholder="₱0.00" oninput="renderPaymentSummary()">
+          <div class="payment-box">
+            <div><span>Total Due</span><b id="pay-total">₱0.00</b></div>
+            <div><span>Cash Received</span><b id="pay-received">₱0.00</b></div>
+            <div class="change-row"><span>Change</span><b id="pay-change">₱0.00</b></div>
+          </div>
+          <label style="font-size:12.5px;display:flex;gap:6px;align-items:center;margin-top:4px"><input type="checkbox" id="auto-print" style="width:auto" checked> Auto-print receipt after sale</label>
+          <button class="primary" onclick="completeSale()">Complete Sale</button>
+          <button class="ghost" style="width:100%;margin-top:6px" onclick="clearCart()">Reset Transaction</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="inventory" class="tab">
+      <div class="toolbar"><h2 style="margin:0">Products</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="ghost" onclick="downloadTemplate()">CSV Template</button>
+          <label class="ghost" style="display:inline-flex;align-items:center;cursor:pointer;margin:0">Import CSV<input type="file" accept=".csv" onchange="importCSV(event)" style="display:none"></label>
+          <button class="ghost" onclick="openModal()">+ Add Product</button>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Mabilis na paraan para ilagay ang maraming items nang sabay: i-download ang CSV Template, punan sa Excel/Sheets, tapos i-Import CSV dito.</p>
+      <div class="panel">
+        <table><thead><tr><th>Product</th><th>Barcode</th><th>Category</th><th>Retail</th><th>Wholesale</th><th>Stock</th><th>Status</th><th></th></tr></thead>
+        <tbody id="inv-body"></tbody></table>
+      </div>
+    </section>
+
+    
+<section id="purchases" class="tab">
+  <div class="purchase-hero">
+    <div class="purchase-title-wrap">
+      <div class="purchase-icon-box" aria-hidden="true">
+        <span>▥</span>
+      </div>
+      <div>
+        <div class="eyebrow">INVENTORY PROCUREMENT</div>
+        <h2>Supplier Purchases</h2>
+        <p class="muted">Record supplier purchases, receiving costs and stock replenishment in one professional workspace.</p>
+      </div>
+    </div>
+    <button class="primary purchase-main-btn" onclick="GG.openPurchase()"><span>＋</span> New Purchase</button>
+  </div>
+
+  <div class="purchase-kpis">
+    <div class="purchase-kpi"><span class="purchase-kpi-label">Purchase Records</span><strong id="gg-pcount">0</strong><small>Saved offline</small></div>
+    <div class="purchase-kpi"><span class="purchase-kpi-label">Total Purchases</span><strong id="gg-ptotal-card">₱0.00</strong><small>All recorded purchases</small></div>
+    <div class="purchase-kpi"><span class="purchase-kpi-label">Latest Supplier</span><strong id="gg-plast-supplier">—</strong><small>Most recent purchase</small></div>
+  </div>
+
+  <div class="panel purchase-table-panel">
+    <div class="purchase-table-head">
+      <div>
+        <h3>Purchase History</h3>
+        <p>Supplier invoices and stock receiving records</p>
+      </div>
+      <div class="purchase-secure-badge"><span>●</span> Offline Ready</div>
+    </div>
+    <div class="purchase-note"><span class="note-icon">i</span><span>Each purchase stores the supplier, receipt reference, payment method and item costs. Stock is increased automatically after saving.</span></div>
+    <div class="mobile-scroll"><table class="purchase-table"><thead><tr><th>Date</th><th>Receipt</th><th>Supplier</th><th>Items</th><th>Total</th><th>Payment</th></tr></thead>
+    <tbody id="gg-purchases"></tbody></table></div>
+  </div>
+</section>
+
+<section id="suppliers" class="tab">
+  <div class="page-title"><div><h2>Suppliers</h2><p class="muted">Supplier directory and purchase history.</p></div>
+  <button class="primary" style="width:auto" onclick="GG.openSupplier()">+ Add Supplier</button></div>
+  <div class="panel"><div class="mobile-scroll"><table><thead><tr><th>Supplier</th><th>Contact</th><th>Address</th><th>Total Purchases</th><th>Last Purchase</th></tr></thead>
+  <tbody id="gg-suppliers"></tbody></table></div></div>
+</section>
+
+<section id="expenses" class="tab">
+  <div class="page-title"><div><h2>Business Expenses</h2><p class="muted">Rental, water, electricity, delivery, supplier purchase and other expenses.</p></div>
+  <button class="primary" style="width:auto" onclick="GG.openExpense()">+ Add Expense</button></div>
+  <div class="stat-grid">
+    <div class="stat-card"><div class="label">This Month</div><div class="num" id="gg-em">₱0.00</div></div>
+    <div class="stat-card"><div class="label">Rental</div><div class="num" id="gg-er">₱0.00</div></div>
+    <div class="stat-card"><div class="label">Water + Electricity</div><div class="num" id="gg-eu">₱0.00</div></div>
+    <div class="stat-card"><div class="label">Delivery</div><div class="num" id="gg-ed">₱0.00</div></div>
+    <div class="stat-card"><div class="label">Other</div><div class="num" id="gg-eo">₱0.00</div></div>
+  </div>
+  <div class="panel"><div class="mobile-scroll"><table><thead><tr><th>Date</th><th>Type</th><th>Supplier/Payee</th><th>Receipt</th><th>Payment</th><th>Amount</th><th>Notes</th><th></th></tr></thead>
+  <tbody id="gg-expenses"></tbody></table></div></div>
+</section>
+
+<section id="reports" class="tab">
+      <div class="toolbar"><h2 style="margin:0">Sales & Profit Report</h2><button class="ghost" onclick="exportCSV()">Export CSV</button></div>
+      
+<div class="stat-grid">
+  <div class="stat-card"><div class="label">Net Sales</div><div class="num" id="gg-rsales">₱0.00</div></div>
+  <div class="stat-card"><div class="label">Cost of Goods Sold</div><div class="num" id="gg-rcogs">₱0.00</div></div>
+  <div class="stat-card"><div class="label">Gross Profit</div><div class="num" id="gg-rgross">₱0.00</div></div>
+  <div class="stat-card"><div class="label">Operating Expenses</div><div class="num" id="gg-rexp">₱0.00</div></div>
+  <div class="stat-card"><div class="label">Net Profit</div><div class="num" id="gg-rnet">₱0.00</div></div>
+</div>
+<div class="tabs2">
+        <button class="active" onclick="setReportRange('today',this)">Today</button>
+        <button onclick="setReportRange('month',this)">This Month</button>
+        <button onclick="setReportRange('all',this)">All Time</button>
+      </div>
+      <div class="cards">
+        <div class="card"><div class="label">Net Sales</div><div class="val" id="r-sales">₱0.00</div></div>
+        <div class="card"><div class="label">Orders</div><div class="val" id="r-orders">0</div></div>
+        <div class="card"><div class="label">Avg. Order</div><div class="val" id="r-avg">₱0.00</div></div>
+      </div>
+      <div class="panel">
+        <table><thead><tr><th>Date</th><th>Items</th><th>Payment</th><th>Total</th></tr></thead><tbody id="r-body"></tbody></table>
+      </div>
+    </section>
+
+    <section id="printer" class="tab">
+      <h2>Printer & Receipt Setup</h2>
+      <div class="grid2">
+        <div class="panel">
+          <h3 style="margin-top:0">Store Receipt Settings</h3>
+          <label style="font-size:12.5px">Business Name</label>
+          <input id="s-name" placeholder="AKOYA MINI MART">
+          <label style="font-size:12.5px">Address</label>
+          <input id="s-address" placeholder="Store address">
+          <label style="font-size:12.5px">Receipt Footer</label>
+          <input id="s-footer" placeholder="Thank you, come again!">
+          <label style="font-size:12.5px">Paper Width</label>
+          <select id="s-width"><option value="58">58 mm</option><option value="80">80 mm</option></select>
+          <label style="font-size:12.5px">Printer Connection</label>
+          <select id="printer-connection"><option>USB Receipt Printer</option><option>Bluetooth Receipt Printer</option><option>System / Network Printer</option></select>
+          <button class="primary" onclick="saveSettings()">Save Settings</button>
+          <button class="ghost" style="width:100%;margin-top:6px" onclick="printTest()">Test Print</button>
+          <p style="font-size:12px;color:var(--muted);margin-top:10px">USB barcode scanners normally act like a keyboard: click the POS barcode field, then scan. Bluetooth scanners can work similarly when paired. Receipt printing from a browser uses the device's print system; direct USB/Bluetooth ESC/POS control depends on the device, browser and printer.</p>
+        </div>
+        <div class="panel">
+          <div class="page-title"><div><h3 style="margin:0">Live Receipt Preview</h3><p class="muted">This preview uses the same receipt layout used by Print/Test Print.</p></div><button class="ghost" onclick="printTest()">Print Preview</button></div>
+          <div class="receipt-preview-wrap"><div id="receipt-preview" class="receipt-preview">
+            <div class="receipt-center"><b id="pv-name">AKOYA MINI MART</b><br><span id="pv-address">Store address</span><br><span id="pv-datetime">Date / Time</span></div>
+            <div class="receipt-dash">--------------------------------</div>
+            <div class="receipt-line"><span>Sample Item x1</span><span>₱10.00</span></div>
+            <div class="receipt-dash">--------------------------------</div>
+            <div class="receipt-line"><span>Subtotal</span><span>₱10.00</span></div>
+            <div class="receipt-line"><span>Discount</span><span>₱0.00</span></div>
+            <div class="receipt-line"><b>TOTAL</b><b>₱10.00</b></div>
+            <div class="receipt-line"><span>Cash Received</span><span>₱20.00</span></div>
+            <div class="receipt-line"><span>Change</span><span>₱10.00</span></div>
+            <div class="receipt-center receipt-footer" id="pv-footer">Thank you, come again!</div>
+          </div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sync" class="tab">
+      <h2>Google Sheets Database Sync</h2>
+      <div class="sync-status-grid">
+        <div class="sync-card"><span>Connection</span><b id="sync-connection">Not configured</b></div>
+        <div class="sync-card"><span>Last Push</span><b id="sync-last-push">—</b></div>
+        <div class="sync-card"><span>Last Pull</span><b id="sync-last-pull">—</b></div><div class="sync-card"><span>Offline Queue</span><b id="sync-queue">0 pending</b></div>
+      </div>
+      <div class="panel">
+        <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Your POS data remains local first. Push sends the current local snapshot to your Google Sheets database. Pull replaces this device's local data with the data currently stored in Google Sheets.</p>
+        <label style="font-size:12.5px">Apps Script Web App URL</label>
+        <input id="s-sheeturl" placeholder="https://script.google.com/macros/s/XXXX/exec">
+        <div class="actions">
+          <button class="primary" onclick="saveSheetUrl()">Save Connection</button>
+          <button class="ghost" onclick="testSheetConnection()">Test Connection</button>
+          <button class="ghost" onclick="syncPush()">⬆ Push All Data</button>
+          <button class="ghost" onclick="syncPull()">⬇ Pull All Data</button>
+        </div>
+        <div id="sync-status" class="sync-message">Not synced yet.</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="print-receipt">
+  <div style="text-align:center">
+    <b id="pr-name"></b><br><span id="pr-address"></span><br><span id="pr-datetime"></span><br>--------------------------------<br>
+  </div>
+  <div id="pr-lines"></div>
+  <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
+    <div class="receipt-line"><span>Subtotal</span><span id="pr-sub"></span></div>
+    <div class="receipt-line"><span>Discount</span><span id="pr-discount"></span></div>
+    <div class="receipt-line"><b>TOTAL</b><b id="pr-total"></b></div>
+    <div class="receipt-line"><span>Payment</span><span id="pr-pay"></span></div>
+  </div>
+  <div style="text-align:center;margin-top:8px" id="pr-footer"></div>
+</div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h2 style="font-size:17px;margin-bottom:12px">Add Product</h2>
+    <input id="m-name" placeholder="Product name">
+    <input id="m-barcode" placeholder="Barcode (scan here or leave blank)">
+    <input id="m-cat" placeholder="Category (e.g. Canned Goods)">
+    <input id="m-price" type="number" placeholder="Retail Price (₱)">
+    <input id="m-wprice" type="number" placeholder="Wholesale Price (₱)">
+    <input id="m-cost" type="number" min="0" step="0.01" placeholder="Unit Cost (₱)">
+    <input id="m-stock" type="number" placeholder="Stock quantity">
+    <input id="m-low" type="number" placeholder="Low stock alert level (default 5)">
+    <button class="primary" onclick="saveProduct()">Save Product</button>
+    <button class="ghost" style="width:100%;margin-top:6px" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+
+
+<div class="modal-bg" id="gg-purchase-modal"><div class="modal" style="width:720px;max-width:94vw">
+<h2>New Supplier Purchase</h2>
+<label>Date</label><input id="gg-pdate" type="date">
+<label>Supplier Name</label><select id="gg-psupplier"></select>
+<label>Purchase Receipt No.</label><input id="gg-preceipt" placeholder="PR-0001">
+<label>Payment</label><select id="gg-ppay"><option>Cash</option><option>GCash</option><option>Maya</option><option>Bank Transfer</option><option>Credit</option></select>
+<div class="panel"><button class="ghost" onclick="GG.addLine()">+ Add Item</button>
+<div class="mobile-scroll"><table><thead><tr><th>Product</th><th>Qty</th><th>Unit Cost</th><th>Total</th><th></th></tr></thead><tbody id="gg-plines"></tbody></table></div>
+<div class="totalrow grand"><span>Total Purchase</span><span id="gg-ptotal">₱0.00</span></div></div>
+<button class="primary" onclick="GG.savePurchase()">Save Purchase & Add Stock</button>
+<button class="ghost" style="width:100%;margin-top:6px" onclick="GG.close('gg-purchase-modal')">Cancel</button>
+</div></div>
+
+<div class="modal-bg" id="gg-supplier-modal"><div class="modal"><h2>Add Supplier</h2>
+<input id="gg-sname" placeholder="Supplier name"><input id="gg-scontact" placeholder="Contact number"><input id="gg-saddress" placeholder="Address"><input id="gg-snotes" placeholder="Notes">
+<button class="primary" onclick="GG.saveSupplier()">Save Supplier</button><button class="ghost" style="width:100%;margin-top:6px" onclick="GG.close('gg-supplier-modal')">Cancel</button>
+</div></div>
+
+<div class="modal-bg" id="gg-expense-modal"><div class="modal"><h2>Add Expense</h2>
+<div class="form-grid"><div><label>Date</label><input id="gg-edate" type="date"></div>
+<div><label>Expense Type</label><select id="gg-etype"><option>Rental</option><option>Water</option><option>Electricity</option><option>Delivery</option><option>Supplier Purchase</option><option>Other</option></select></div>
+<div><label>Supplier / Payee</label><input id="gg-esupplier" placeholder="Name"></div><div><label>Receipt / Reference</label><input id="gg-ereceipt"></div>
+<div><label>Amount</label><input id="gg-eamount" type="number" step="0.01"></div><div><label>Payment</label><select id="gg-epay"><option>Cash</option><option>GCash</option><option>Maya</option><option>Bank Transfer</option></select></div>
+<div class="span-2"><label>Notes</label><input id="gg-enotes" placeholder="Description"></div></div>
+<button class="primary" onclick="GG.saveExpense()">Save Expense</button><button class="ghost" style="width:100%;margin-top:6px" onclick="GG.close('gg-expense-modal')">Cancel</button>
+</div></div>
+
+<script>
+/* GroceryGo — unified, validated local data layer */
+const GGK = {
+  products:'gg_products',
+  sales:'gg_sales',
+  expenses:'gg_expenses_v2',
+  suppliers:'gg_suppliers_v2',
+  purchases:'gg_purchases_v2',
+  settings:'gg_settings'
+};
+
+function readJSON(key, fallback){
+  try{
+    const raw = localStorage.getItem(key);
+    if(raw === null) return fallback;
+    const value = JSON.parse(raw);
+    return value ?? fallback;
+  }catch(e){
+    console.warn('Invalid local data for', key, e);
+    return fallback;
+  }
+}
+function writeJSON(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
+
+let products = normalizeProducts(readJSON(GGK.products, []));
+let sales = normalizeSales(readJSON(GGK.sales, []));
+let cart = [];
+
+function round2(n){
+  const v = Number(n);
+  return Number.isFinite(v) ? Math.round((v + Number.EPSILON) * 100) / 100 : 0;
+}
+function num(n, fallback=0){
+  const v = Number(n);
+  return Number.isFinite(v) ? v : fallback;
+}
+function int(n, fallback=0){
+  const v = parseInt(n,10);
+  return Number.isFinite(v) ? v : fallback;
+}
+function peso(n){ return '₱' + round2(n).toFixed(2); }
+function todayStr(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function makeId(prefix='ID'){
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+}
+function esc(x){
+  return String(x ?? '').replace(/[&<>"']/g,m=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
+}
+
+function normalizeProducts(list){
+  if(!Array.isArray(list)) return [];
+  return list.map((p,i)=>({
+    id: String(p?.id ?? makeId('P')),
+    name: String(p?.name ?? '').trim(),
+    barcode: String(p?.barcode ?? '').trim(),
+    category: String(p?.category ?? 'General').trim() || 'General',
+    priceRetail: round2(Math.max(0,num(p?.priceRetail))),
+    priceWholesale: round2(Math.max(0,num(p?.priceWholesale ?? p?.priceRetail))),
+    cost: round2(Math.max(0,num(p?.cost))),
+    stock: Math.max(0,int(p?.stock)),
+    low: Math.max(0,int(p?.low,5))
+  })).filter(p=>p.name);
+}
+function normalizeSales(list){
+  if(!Array.isArray(list)) return [];
+  return list.map((s,i)=>({
+    id:String(s?.id ?? makeId('S')),
+    date:String(s?.date ?? todayStr()).slice(0,10),
+    items:Math.max(0,int(s?.items)),
+    itemCount:Math.max(0,int(s?.itemCount ?? s?.items)),
+    subtotal:round2(s?.subtotal),
+    discountPct:Math.max(0,Math.min(100,num(s?.discountPct))),
+    discountAmt:round2(s?.discountAmt),
+    total:round2(s?.total),
+    cost:round2(s?.cost),
+    payment:String(s?.payment ?? 'Cash'),
+    saleType:String(s?.saleType ?? 'retail'),
+    cashReceived:round2(s?.cashReceived),
+    change:round2(s?.change),
+    lines:Array.isArray(s?.lines) ? s.lines.map(l=>({
+      productId:String(l?.productId ?? ''),
+      name:String(l?.name ?? ''),
+      barcode:String(l?.barcode ?? ''),
+      qty:Math.max(0,int(l?.qty)),
+      price:round2(l?.price),
+      cost:round2(l?.cost),
+      total:round2(l?.total ?? num(l?.qty)*num(l?.price)),
+      saleType:String(l?.saleType ?? 'retail')
+    })) : []
+  }));
+}
+function save(){
+  products = normalizeProducts(products);
+  sales = normalizeSales(sales);
+  writeJSON(GGK.products,products);
+  writeJSON(GGK.sales,sales);
+}
+
+function applyTheme(t){
+  const theme = t === 'dark' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme',theme);
+  const b=document.getElementById('theme-btn');
+  if(b) b.textContent=theme==='dark'?'Light Mode':'Dark Mode';
+  localStorage.setItem('gg_theme',theme);
+}
+function toggleTheme(){
+  applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
+}
+applyTheme(localStorage.getItem('gg_theme')||'light');
+
+function downloadTemplate(){
+  const csv='name,barcode,category,priceRetail,priceWholesale,stock,low,cost\nSample Sardines,4800123456789,Canned Goods,25,22,100,10,18\n';
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='grocerygo_product_template.csv';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+function parseCSVLine(line){
+  const out=[]; let cur=''; let quoted=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){
+      if(quoted && line[i+1]==='"'){cur+='"';i++;}
+      else quoted=!quoted;
+    }else if(ch===',' && !quoted){
+      out.push(cur.trim()); cur='';
+    }else cur+=ch;
+  }
+  out.push(cur.trim());
+  return out;
+}
+function importCSV(evt){
+  const file=evt.target.files?.[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const rows=String(e.target.result||'').split(/\r?\n/).filter(r=>r.trim());
+    if(rows.length<2){ alert('CSV file has no product rows.'); evt.target.value=''; return; }
+    const headers=parseCSVLine(rows.shift()).map(h=>h.replace(/^\uFEFF/,'').trim());
+    let added=0;
+    rows.forEach((row,index)=>{
+      const cols=parseCSVLine(row), obj={};
+      headers.forEach((h,i)=>obj[h]=cols[i]??'');
+      const name=String(obj.name||'').trim();
+      const retail=num(obj.priceRetail);
+      if(!name || retail<=0) return;
+      products.push({
+        id:makeId('P'), name,
+        barcode:String(obj.barcode||'').trim(),
+        category:String(obj.category||'General').trim()||'General',
+        priceRetail:round2(retail),
+        priceWholesale:round2(num(obj.priceWholesale,retail)),
+        cost:round2(num(obj.cost)),
+        stock:Math.max(0,int(obj.stock)),
+        low:Math.max(0,int(obj.low,5))
+      });
+      added++;
+    });
+    save(); renderAll(); syncPush(true); evt.target.value='';
+    alert(`${added} product${added===1?'':'s'} imported.`);
+  };
+  reader.readAsText(file);
+}
+
+function goTab(tab){ const b=document.querySelector(`.nav-btn[data-tab=\"${tab}\"]`); if(b)b.click(); }
+
+document.querySelectorAll('.nav-btn[data-tab]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  document.getElementById(b.dataset.tab)?.classList.add('active');
+  renderAll();
+});
+
+function openModal(){ document.getElementById('modal').classList.add('show'); }
+function closeModal(){
+  document.getElementById('modal').classList.remove('show');
+  ['m-name','m-barcode','m-cat','m-price','m-wprice','m-cost','m-stock','m-low'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+}
+function saveProduct(){
+  const name=document.getElementById('m-name').value.trim();
+  const price=round2(num(document.getElementById('m-price').value));
+  if(!name || price<=0){ alert('Enter a product name and valid retail price.'); return; }
+
+  const wholesaleInput=document.getElementById('m-wprice').value;
+  const costInput=document.getElementById('m-cost');
+  const wholesale=round2(num(wholesaleInput,price));
+  const cost=round2(num(costInput?.value,0));
+  const stock=Math.max(0,int(document.getElementById('m-stock').value));
+  const low=Math.max(0,int(document.getElementById('m-low').value,5));
+
+  products.push({
+    id:makeId('P'), name,
+    barcode:document.getElementById('m-barcode').value.trim(),
+    category:document.getElementById('m-cat').value.trim()||'General',
+    priceRetail:price, priceWholesale:wholesale, cost, stock, low
+  });
+  save(); closeModal(); renderAll(); syncPush(true);
+}
+function deleteProduct(id){
+  const key=String(id);
+  if(confirm('Remove this product?')){
+    products=products.filter(p=>String(p.id)!==key);
+    cart=cart.filter(c=>String(c.id)!==key);
+    save(); renderAll(); syncPush(true);
+  }
+}
+
+function renderInventory(){
+  const tb=document.getElementById('inv-body');
+  if(!tb) return;
+  tb.innerHTML='';
+  products.forEach(p=>{
+    const lowFlag=p.stock<=p.low;
+    tb.innerHTML+=`<tr>
+      <td>${esc(p.name)}</td><td>${esc(p.barcode||'—')}</td><td>${esc(p.category)}</td>
+      <td>${peso(p.priceRetail)}</td><td>${peso(p.priceWholesale)}</td>
+      <td class="${lowFlag?'low':''}">${p.stock}</td>
+      <td>${lowFlag?'<span class="low">Low</span>':'<span class="pill">OK</span>'}</td>
+      <td><button class="ghost" onclick="deleteProduct('${esc(p.id)}')">Delete</button></td>
+    </tr>`;
+  });
+}
+
+let saleType='retail';
+function setSaleType(t){
+  saleType=t==='wholesale'?'wholesale':'retail';
+  document.getElementById('type-retail')?.classList.toggle('active',saleType==='retail');
+  document.getElementById('type-wholesale')?.classList.toggle('active',saleType==='wholesale');
+  renderCart();
+}
+function unitPrice(p){ return round2(saleType==='wholesale'?p.priceWholesale:p.priceRetail); }
+function itemPrice(p,item){ return round2((item?.saleType||saleType)==='wholesale'?p.priceWholesale:p.priceRetail); }
+function itemTypeLabel(item){ return (item?.saleType||saleType)==='wholesale'?'Wholesale':'Retail'; }
+
+function renderSuggestions(filter){
+  const box=document.getElementById('pos-suggest');
+  if(!box) return;
+  if(!filter){box.style.display='none';box.innerHTML='';return;}
+  const q=filter.toLowerCase();
+  const matches=products.filter(p=>p.name.toLowerCase().includes(q)||(p.barcode&&p.barcode.includes(filter))).slice(0,8);
+  if(!matches.length){box.style.display='none';return;}
+  box.innerHTML=matches.map(p=>`<div onclick="pickSuggestion('${esc(p.id)}')">
+    <span>${esc(p.name)} <small style="color:var(--muted)">(${esc(p.barcode||'no barcode')})</small></span>
+    <b>${peso(unitPrice(p))}</b></div>`).join('');
+  box.style.display='block';
+}
+function pickSuggestion(id){
+  addToCart(id);
+  document.getElementById('pos-search').value='';
+  renderSuggestions('');
+  document.getElementById('pos-search').focus();
+}
+const posSearchEl=document.getElementById('pos-search');
+if(posSearchEl){
+  posSearchEl.addEventListener('input',e=>renderSuggestions(e.target.value));
+  posSearchEl.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      const val=e.target.value.trim();
+      const hit=products.find(p=>p.barcode && p.barcode===val) ||
+                products.find(p=>p.name.toLowerCase()===val.toLowerCase());
+      if(hit){addToCart(hit.id);e.target.value='';renderSuggestions('');}
+      else if(val) alert('Product not found.');
+    }
+  });
+}
+
+function addToCart(id){
+  const p=products.find(x=>String(x.id)===String(id));
+  if(!p){alert('Product not found.');return;}
+  if(p.stock<=0){alert('Out of stock.');return;}
+  const item=cart.find(c=>String(c.id)===String(id) && (c.saleType||'retail')===saleType);
+  if(item){
+    if(item.qty<p.stock) item.qty++;
+    else alert(`Only ${p.stock} unit${p.stock===1?'':'s'} available.`);
+  }else cart.push({id:String(id),qty:1,saleType});
+  renderCart();
+}
+function setQty(id,val,idx){
+  const item=Number.isInteger(idx)?cart[idx]:cart.find(c=>String(c.id)===String(id));
+  const p=products.find(x=>String(x.id)===String(id));
+  if(!item||!p)return;
+  let q=Math.max(1,int(val,1));
+  if(q>p.stock){q=p.stock;alert(`Maximum available stock is ${p.stock}.`);}
+  item.qty=q; renderCart();
+}
+function setCartItemType(id,type,idx){ const item=Number.isInteger(idx)?cart[idx]:cart.find(c=>String(c.id)===String(id)); if(!item)return; item.saleType=type==='wholesale'?'wholesale':'retail'; renderCart(); }
+function removeFromCart(id,idx){ if(Number.isInteger(idx)) cart.splice(idx,1); else cart=cart.filter(c=>String(c.id)!==String(id)); renderCart(); }
+function clearCart(){
+  cart=[]; const d=document.getElementById('discount-pct'); if(d)d.value=0; renderCart();
+}
+
+/* Safe dashboard reset: clears today's sales/expenses and restores stock from today's sale lines. */
+function resetTodayRecords(){
+  const today = todayStr();
+  const todaysSales = sales.filter(s=>s.date===today);
+  const todaysExpenses = readJSON(GGK.expenses,[]).filter(e=>String(e.date||'').slice(0,10)===today);
+
+  if(!todaysSales.length && !todaysExpenses.length){
+    alert('Dashboard is already clear for today.');
+    return;
+  }
+
+  const ok = confirm(
+    `Reset today's dashboard records?\n\n` +
+    `Sales transactions: ${todaysSales.length}\n` +
+    `Expenses: ${todaysExpenses.length}\n\n` +
+    `Today's sales will be removed and stock will be restored from saved sale items.`
+  );
+  if(!ok) return;
+
+  /* Restore stock from today's completed sales before deleting them. */
+  let restored = 0;
+  todaysSales.forEach(s=>{
+    if(Array.isArray(s.lines)){
+      s.lines.forEach(line=>{
+        const p = products.find(x=>String(x.id)===String(line.productId));
+        const q = Math.max(0,int(line.qty,0));
+        if(p && q){
+          p.stock = int(p.stock) + q;
+          restored += q;
+        }
+      });
+    }
+  });
+
+  sales = sales.filter(s=>s.date!==today);
+  writeJSON(GGK.sales, sales);
+  products = normalizeProducts(products);
+  writeJSON(GGK.products, products);
+
+  const allExpenses = readJSON(GGK.expenses,[]);
+  writeJSON(
+    GGK.expenses,
+    allExpenses.filter(e=>String(e.date||'').slice(0,10)!==today)
+  );
+
+  clearCart();
+  renderAll();
+  if(window.GG) GG.render();
+  syncPush(true);
+
+  alert(`Today's dashboard records were reset.\n${restored} stock unit(s) restored.`);
+}
+function calcTotals(){
+  let subtotal=0, items=0, cost=0;
+  cart.forEach(c=>{
+    const p=products.find(x=>String(x.id)===String(c.id));
+    if(!p)return;
+    subtotal += itemPrice(p,c)*c.qty;
+    cost += round2(p.cost)*c.qty;
+    items += c.qty;
+  });
+  subtotal=round2(subtotal); cost=round2(cost);
+  const pct=Math.max(0,Math.min(100,num(document.getElementById('discount-pct')?.value)));
+  const discountAmt=round2(subtotal*pct/100);
+  const total=round2(subtotal-discountAmt);
+  return {subtotal,items,pct,discountAmt,total,cost};
+}
+function renderCart(){
+  const tb=document.getElementById('tx-body');
+  if(!tb)return;
+  tb.innerHTML='';
+  if(!cart.length){
+    tb.innerHTML='<tr id="tx-empty"><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">No items yet — scan or search a product above.</td></tr>';
+  }
+  cart.forEach((c,i)=>{
+    const p=products.find(x=>String(x.id)===String(c.id));
+    if(!p)return;
+    const up=itemPrice(p,c), lineTotal=round2(up*c.qty);
+    const type=(c.saleType||'retail');
+    tb.innerHTML+=`<tr><td>${i+1}</td><td>${esc(p.barcode||'—')}</td><td>${esc(p.name)}</td>
+      <td><div class="mini-type"><button type="button" class="${type==='retail'?'active':''}" onclick="setCartItemType('${esc(p.id)}','retail',${i})">R</button><button type="button" class="${type==='wholesale'?'active':''}" onclick="setCartItemType('${esc(p.id)}','wholesale',${i})">W</button></div></td>
+      <td><input type="number" value="${c.qty}" min="1" max="${p.stock}" onchange="setQty('${esc(p.id)}',this.value,${i})"></td>
+      <td>${peso(up)}</td><td>${peso(lineTotal)}</td>
+      <td><button class="ghost" onclick="removeFromCart('${esc(p.id)}',${i})">×</button></td></tr>`;
+  });
+  const t=calcTotals();
+  document.getElementById('c-items').textContent=t.items;
+  document.getElementById('c-sub').textContent=peso(t.subtotal);
+  document.getElementById('c-discount').textContent=peso(t.discountAmt);
+  document.getElementById('c-total').textContent=peso(t.total);
+  renderPaymentSummary();
+}
+
+
+function completeSale(){
+  if(!cart.length){alert('Cart is empty.');return;}
+  /* Re-check stock immediately before committing the sale. */
+  for(const c of cart){
+    const p=products.find(x=>String(x.id)===String(c.id));
+    if(!p){alert('A product in the cart no longer exists.');return;}
+    if(c.qty<1 || c.qty>p.stock){alert(`${p.name}: insufficient stock.`);return;}
+  }
+
+  const t=calcTotals();
+  if(t.total<0){alert('Invalid sale total.');return;}
+
+  const lines=cart.map(c=>{
+    const p=products.find(x=>String(x.id)===String(c.id));
+    const price=itemPrice(p,c);
+    const lineTotal=round2(price*c.qty);
+    const lineCost=round2(p.cost*c.qty);
+    p.stock-=c.qty;
+    return {
+      productId:String(p.id),name:p.name,barcode:p.barcode||'',
+      qty:c.qty,price,cost:round2(p.cost),total:lineTotal,saleType:c.saleType||'retail'
+    };
+  });
+
+  const payment=document.getElementById('pay-method').value;
+  const cashReceived=round2(num(document.getElementById('cash-received')?.value));
+  if(payment==='Cash' && cashReceived < t.total){ alert(`Insufficient cash. Amount due is ${peso(t.total)}.`); return; }
+  const change=payment==='Cash'?round2(cashReceived-t.total):0;
+  const sale={
+    id:makeId('S'),date:todayStr(),
+    items:t.items,itemCount:cart.length,
+    total:t.total,subtotal:t.subtotal,
+    discountPct:t.pct,discountAmt:t.discountAmt,
+    cost:t.cost,payment,saleType,lines,cashReceived,change
+  };
+  sales.push(sale);
+  save();
+
+  if(document.getElementById('auto-print')?.checked) printReceipt(lines,t,payment,cashReceived,change);
+  cart=[]; document.getElementById('discount-pct').value=0; document.getElementById('cash-received').value='';
+  renderAll(); syncPush(true);
+}
+
+function loadSettings(){return readJSON(GGK.settings,{});}
+function saveSettings(){
+  const s={...loadSettings(),
+    name:document.getElementById('s-name').value.trim(),
+    address:document.getElementById('s-address').value.trim(),
+    footer:document.getElementById('s-footer').value.trim(),
+    width:document.getElementById('s-width').value,
+    printerConnection:document.getElementById('printer-connection')?.value||'USB Receipt Printer'
+  };
+  writeJSON(GGK.settings,s); alert('Settings saved.');
+}
+function fillSettingsForm(){
+  const s=loadSettings();
+  document.getElementById('s-name').value=s.name||'';
+  document.getElementById('s-address').value=s.address||'';
+  document.getElementById('s-footer').value=s.footer||'Thank you, come again!';
+  document.getElementById('s-width').value=s.width||'58';
+  if(document.getElementById('printer-connection'))document.getElementById('printer-connection').value=s.printerConnection||'USB Receipt Printer';
+  if(document.getElementById('pv-name'))document.getElementById('pv-name').textContent=s.name||'AKOYA MINI MART';
+  if(document.getElementById('pv-address'))document.getElementById('pv-address').textContent=s.address||'Store address';
+  if(document.getElementById('pv-footer'))document.getElementById('pv-footer').textContent=s.footer||'Thank you, come again!';
+  document.getElementById('s-sheeturl').value=s.sheetUrl||'';
+}
+function saveSheetUrl(){
+  const s=loadSettings();
+  s.sheetUrl=document.getElementById('s-sheeturl').value.trim().replace(/\s+/g,'');
+  writeJSON(GGK.settings,s);
+  updateSyncCards();
+  alert(s.sheetUrl?'Google Sheets Web App URL saved.':'Google Sheets Web App URL cleared.');
+}
+function syncStatus(msg){
+  const el=document.getElementById('sync-status');
+  if(el)el.textContent=msg;
+}
+
+function updateReceiptPreview(lines,t,payment,cashReceived=0,change=0){
+  const s=loadSettings();
+  const name=s.name||'AKOYA MINI MART';
+  const address=s.address||'';
+  document.getElementById('pv-name').textContent=name;
+  document.getElementById('pv-address').textContent=address;
+  document.getElementById('pv-datetime').textContent=new Date().toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'});
+  document.getElementById('pv-footer').textContent=s.footer||'Thank you, come again!';
+}
+function renderPaymentSummary(){
+  const t=calcTotals();
+  const received=round2(num(document.getElementById('cash-received')?.value));
+  const change=Math.max(0,round2(received-t.total));
+  const ids=[['pay-total',peso(t.total)],['pay-received',peso(received)],['pay-change',peso(change)]];
+  ids.forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.textContent=val;});
+}
+function printReceipt(lines,t,payment,cashReceived=0,change=0){
+  const s=loadSettings();
+  document.getElementById('pr-name').textContent=s.name||'AKOYA MINI MART';
+  document.getElementById('pr-address').textContent=s.address||'';
+  document.getElementById('pr-datetime').textContent=new Date().toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'});
+  document.getElementById('pr-footer').textContent=s.footer||'Thank you, come again!';
+  document.getElementById('pr-sub').textContent=peso(t.subtotal);
+  document.getElementById('pr-discount').textContent=(t.pct>0?t.pct+'% = ':'')+peso(t.discountAmt);
+  document.getElementById('pr-total').textContent=peso(t.total);
+  document.getElementById('pr-pay').textContent=payment;
+  const extra=payment==='Cash'?`<div class="receipt-line"><span>Cash Received</span><span>${peso(cashReceived)}</span></div><div class="receipt-line"><b>CHANGE</b><b>${peso(change)}</b></div>`:'';
+  document.getElementById('pr-lines').innerHTML=lines.map(l=>`<div class="receipt-line"><span>${esc(l.name)} x${l.qty}</span><span>${peso(l.price*l.qty)}</span></div>`).join('')+extra;
+  updateReceiptPreview(lines,t,payment,cashReceived,change);
+  window.print();
+}
+
+function printTest(){
+  const t={subtotal:10,pct:0,discountAmt:0,total:10};
+  printReceipt([{name:'Sample Item',qty:1,price:10}],t,'Cash',20,10);
+}
+
+let reportRange='today';
+function setReportRange(r,btn){
+  window.ggReportRange=r; reportRange=r;
+  document.querySelectorAll('.tabs2 button').forEach(b=>b.classList.remove('active'));
+  btn?.classList.add('active');
+  renderReports();
+  if(window.GG)GG.render();
+}
+function filteredSales(){
+  if(reportRange==='today')return sales.filter(s=>s.date===todayStr());
+  if(reportRange==='month')return sales.filter(s=>s.date.slice(0,7)===todayStr().slice(0,7));
+  return sales;
+}
+function renderReports(){
+  const list=filteredSales();
+  const total=round2(list.reduce((a,s)=>a+num(s.total),0));
+  document.getElementById('r-sales').textContent=peso(total);
+  document.getElementById('r-orders').textContent=list.length;
+  document.getElementById('r-avg').textContent=peso(list.length?total/list.length:0);
+  const tb=document.getElementById('r-body'); if(!tb)return;
+  tb.innerHTML='';
+  list.slice().reverse().forEach(s=>{
+    tb.innerHTML+=`<tr><td>${esc(s.date)}</td><td>${s.items} items</td><td>${esc(s.payment)}</td><td>${peso(s.total)}</td></tr>`;
+  });
+}
+function exportCSV(){
+  const list=filteredSales();
+  let csv='Date,Items,Payment,Discount%,Subtotal,Discount Amount,Total,Cost\n';
+  list.forEach(s=>csv+=[
+    s.date,s.items,s.payment,s.discountPct||0,s.subtotal||0,s.discountAmt||0,s.total||0,s.cost||0
+  ].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')+'\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='grocerygo_sales_report.csv';a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function renderDashboard(){
+  const today=sales.filter(s=>s.date===todayStr());
+  const totalToday=round2(today.reduce((a,s)=>a+num(s.total),0));
+  document.getElementById('d-sales').textContent=peso(totalToday);
+  document.getElementById('d-orders').textContent=today.length;
+  document.getElementById('d-products').textContent=products.length;
+  document.getElementById('d-low').textContent=products.filter(p=>p.stock<=p.low).length;
+  const tb=document.getElementById('d-recent')?.querySelector('tbody');if(!tb)return;
+  tb.innerHTML='';
+  sales.slice().reverse().slice(0,5).forEach(s=>{
+    tb.innerHTML+=`<tr><td>${esc(s.date)}</td><td>${s.items} items</td><td>${esc(s.payment)}</td><td>${peso(s.total)}</td></tr>`;
+  });
+}
+function renderAll(){renderDashboard();renderInventory();renderReports();renderCart();}
+
+fillSettingsForm();
+renderAll();
+</script>
+
+<script>
+/* GroceryGo Professional Business Layer — purchases, suppliers, expenses and reports */
+const GG = (() => {
+  const K={p:'gg_products',s:'gg_sales',e:'gg_expenses_v2',u:'gg_suppliers_v2',b:'gg_purchases_v2'};
+  let lines=[];
+
+  const get=(k,d=[])=>{
+    try{const v=JSON.parse(localStorage.getItem(k)||JSON.stringify(d));return Array.isArray(v)?v:d;}
+    catch(e){return d;}
+  };
+  const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const products=()=>normalizeProducts(get(K.p));
+  const sales=()=>normalizeSales(get(K.s));
+  const expenses=()=>get(K.e).map(x=>({...x,id:String(x.id??makeId('E')),date:String(x.date??todayStr()).slice(0,10),amount:round2(x.amount),type:String(x.type??'Other'),supplier:String(x.supplier??''),receiptNo:String(x.receiptNo??''),payment:String(x.payment??'Cash'),notes:String(x.notes??'')}));
+  const suppliers=()=>get(K.u).map(x=>({...x,id:String(x.id??makeId('U')),name:String(x.name??'').trim(),contact:String(x.contact??''),address:String(x.address??''),notes:String(x.notes??'')}));
+  const purchases=()=>get(K.b).map(x=>({...x,id:String(x.id??makeId('B')),date:String(x.date??todayStr()).slice(0,10),receiptNo:String(x.receiptNo??''),supplierId:String(x.supplierId??''),supplier:String(x.supplier??''),payment:String(x.payment??'Cash'),total:round2(x.total),items:Array.isArray(x.items)?x.items:[]}));
+  const peso2=n=>peso(n);
+  const esc2=x=>esc(x);
+  function open(id){document.getElementById(id)?.classList.add('show')}
+  function close(id){document.getElementById(id)?.classList.remove('show')}
+
+  function render(){
+    const p=products(),s=sales(),e=expenses(),u=suppliers(),b=purchases(),d=todayStr();
+    const ds=s.filter(x=>x.date===d),de=e.filter(x=>x.date===d);
+    const st=round2(ds.reduce((a,x)=>a+num(x.total),0));
+    const cost=round2(ds.reduce((a,x)=>a+num(x.cost),0));
+    document.getElementById('gg-dsales').textContent=peso2(st);
+    document.getElementById('gg-dexp').textContent=peso2(de.reduce((a,x)=>a+num(x.amount),0));
+    document.getElementById('gg-dgross').textContent=peso2(st-cost);
+    document.getElementById('gg-dorders').textContent=ds.length;
+    document.getElementById('gg-dlow').textContent=p.filter(x=>x.stock<=x.low).length;
+    document.getElementById('gg-em').textContent=peso2(e.filter(x=>x.date.slice(0,7)===d.slice(0,7)).reduce((a,x)=>a+num(x.amount),0));
+    const sum=t=>e.filter(x=>x.date.slice(0,7)===d.slice(0,7)&&x.type===t).reduce((a,x)=>a+num(x.amount),0);
+    document.getElementById('gg-er').textContent=peso2(sum('Rental'));
+    document.getElementById('gg-eu').textContent=peso2(sum('Water')+sum('Electricity'));
+    document.getElementById('gg-ed').textContent=peso2(sum('Delivery'));
+    document.getElementById('gg-eo').textContent=peso2(sum('Other')+sum('Supplier Purchase'));
+
+    document.getElementById('gg-expenses').innerHTML=e.slice().reverse().map(x=>`<tr>
+      <td>${esc2(x.date)}</td><td>${esc2(x.type)}</td><td>${esc2(x.supplier||'—')}</td>
+      <td>${esc2(x.receiptNo||'—')}</td><td>${esc2(x.payment)}</td><td>${peso2(x.amount)}</td><td>${esc2(x.notes||'')}</td>
+      <td><button class="ghost" onclick="GG.delExpense('${esc2(x.id)}')">Delete</button></td>
+    </tr>`).join('')||'<tr><td colspan="8" class="empty">No expenses yet.</td></tr>';
+
+    document.getElementById('gg-purchases').innerHTML=b.slice().reverse().map(x=>`<tr>
+      <td>${esc2(x.date)}</td><td>${esc2(x.receiptNo)}</td><td>${esc2(x.supplier)}</td>
+      <td>${x.items?.length||0}</td><td>${peso2(x.total)}</td><td>${esc2(x.payment)}</td>
+    </tr>`).join('')||'<tr><td colspan="6" class="empty">No purchases yet.</td></tr>';
+
+    const pc=document.getElementById('gg-pcount');if(pc)pc.textContent=b.length;
+    const pt=document.getElementById('gg-ptotal-card');if(pt)pt.textContent=peso2(b.reduce((a,x)=>a+num(x.total),0));
+    const pls=document.getElementById('gg-plast-supplier');if(pls)pls.textContent=b.length?esc2(b[b.length-1].supplier||'—'):'—';
+
+    document.getElementById('gg-suppliers').innerHTML=u.map(x=>{
+      const q=b.filter(z=>String(z.supplierId)===String(x.id));
+      return `<tr><td>${esc2(x.name)}</td><td>${esc2(x.contact||'—')}</td><td>${esc2(x.address||'—')}</td>
+      <td>${peso2(q.reduce((a,z)=>a+num(z.total),0))}</td><td>${q.length?q[q.length-1].date:'—'}</td></tr>`;
+    }).join('')||'<tr><td colspan="5" class="empty">No suppliers yet.</td></tr>';
+
+    renderReport();
+  }
+
+  function renderReport(){
+    const d=todayStr(),range=window.ggReportRange||'today';
+    const inRange=x=>range==='all'||(range==='month'?x.date.slice(0,7)===d.slice(0,7):x.date===d);
+    const s=sales().filter(inRange),e=expenses().filter(inRange);
+    const salesTotal=round2(s.reduce((a,x)=>a+num(x.total),0));
+    const cogs=round2(s.reduce((a,x)=>a+num(x.cost),0));
+    const ex=round2(e.reduce((a,x)=>a+num(x.amount),0));
+    document.getElementById('gg-rsales').textContent=peso2(salesTotal);
+    document.getElementById('gg-rcogs').textContent=peso2(cogs);
+    document.getElementById('gg-rgross').textContent=peso2(salesTotal-cogs);
+    document.getElementById('gg-rexp').textContent=peso2(ex);
+    document.getElementById('gg-rnet').textContent=peso2(salesTotal-cogs-ex);
+  }
+
+  function openPurchase(){
+    const us=suppliers();
+    if(!us.length){alert('Add a supplier first.');return;}
+    const ps=products();
+    if(!ps.length){alert('Add products first.');return;}
+    const sel=document.getElementById('gg-psupplier');
+    sel.innerHTML=us.map(x=>`<option value="${esc2(x.id)}">${esc2(x.name)}</option>`).join('');
+    document.getElementById('gg-pdate').value=todayStr();
+    document.getElementById('gg-preceipt').value='';
+    lines=[];addLine();open('gg-purchase-modal');
+  }
+  function addLine(){
+    const ps=products();if(!ps.length){alert('Add products first.');return;}
+    const p=ps[0];
+    lines.push({productId:String(p.id),qty:1,cost:round2(p.cost||p.priceRetail||0)});
+    renderLines();
+  }
+  function renderLines(){
+    const ps=products();
+    document.getElementById('gg-plines').innerHTML=lines.map((l,i)=>`<tr>
+      <td><select onchange="GG.changeLine(${i},this.value)">${ps.map(x=>`<option value="${esc2(x.id)}" ${String(l.productId)===String(x.id)?'selected':''}>${esc2(x.name)}</option>`).join('')}</select></td>
+      <td><input type="number" min="1" step="1" value="${l.qty}" onchange="GG.qtyLine(${i},this.value)"></td>
+      <td><input type="number" min="0" step="0.01" value="${l.cost.toFixed(2)}" onchange="GG.costLine(${i},this.value)"></td>
+      <td>${peso2(round2(l.qty*l.cost))}</td><td><button class="ghost" onclick="GG.removeLine(${i})">×</button></td>
+    </tr>`).join('');
+    document.getElementById('gg-ptotal').textContent=peso2(lines.reduce((a,x)=>a+round2(x.qty*x.cost),0));
+  }
+  function changeLine(i,v){
+    if(!lines[i])return;
+    const p=products().find(x=>String(x.id)===String(v));if(!p)return;
+    lines[i].productId=String(v);lines[i].cost=round2(p.cost||p.priceRetail||0);renderLines();
+  }
+  function qtyLine(i,v){if(lines[i]){lines[i].qty=Math.max(1,int(v,1));renderLines();}}
+  function costLine(i,v){if(lines[i]){lines[i].cost=Math.max(0,round2(num(v)));renderLines();}}
+  function removeLine(i){lines.splice(i,1);renderLines();}
+
+  function savePurchase(){
+    const us=suppliers(),ps=products();
+    const supplier=us.find(x=>String(x.id)===String(document.getElementById('gg-psupplier').value));
+    if(!supplier||!lines.length){alert('Complete supplier and purchase items.');return;}
+    const cleanLines=lines.filter(l=>ps.some(p=>String(p.id)===String(l.productId)));
+    if(!cleanLines.length){alert('Add at least one valid item.');return;}
+    const total=round2(cleanLines.reduce((a,x)=>a+round2(x.qty*x.cost),0));
+    if(total<=0){alert('Purchase total must be greater than ₱0.00.');return;}
+
+    const items=cleanLines.map(x=>{
+      const pr=ps.find(y=>String(y.id)===String(x.productId));
+      pr.stock=Math.max(0,int(pr.stock)+int(x.qty));
+      pr.cost=round2(x.cost);
+      return {productId:String(pr.id),name:pr.name,qty:int(x.qty),cost:round2(x.cost),total:round2(x.qty*x.cost)};
+    });
+
+    const all=purchases();
+    all.push({
+      id:makeId('B'),date:document.getElementById('gg-pdate').value||todayStr(),
+      receiptNo:document.getElementById('gg-preceipt').value.trim()||('PR-'+Date.now()),
+      supplierId:String(supplier.id),supplier:supplier.name,
+      payment:document.getElementById('gg-ppay').value,total,items
+    });
+    writeJSON(K.p,normalizeProducts(ps));put(K.b,all);
+    close('gg-purchase-modal');render();renderAll();syncPush(true);
+    alert('Purchase saved. Stock updated automatically.');
+  }
+
+  function openSupplier(){
+    ['gg-sname','gg-scontact','gg-saddress','gg-snotes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+    open('gg-supplier-modal');
+  }
+  function saveSupplier(){
+    const name=document.getElementById('gg-sname').value.trim();
+    if(!name){alert('Enter supplier name.');return;}
+    const a=suppliers();
+    a.push({id:makeId('U'),name,contact:document.getElementById('gg-scontact').value.trim(),address:document.getElementById('gg-saddress').value.trim(),notes:document.getElementById('gg-snotes').value.trim()});
+    put(K.u,a);close('gg-supplier-modal');render();syncPush(true);
+  }
+
+  function openExpense(){
+    document.getElementById('gg-edate').value=todayStr();
+    ['gg-esupplier','gg-ereceipt','gg-eamount','gg-enotes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+    open('gg-expense-modal');
+  }
+  function saveExpense(){
+    const amount=round2(num(document.getElementById('gg-eamount').value));
+    if(amount<=0){alert('Enter a valid amount greater than ₱0.00.');return;}
+    const a=expenses();
+    a.push({
+      id:makeId('E'),date:document.getElementById('gg-edate').value||todayStr(),
+      type:document.getElementById('gg-etype').value,
+      supplier:document.getElementById('gg-esupplier').value.trim(),
+      receiptNo:document.getElementById('gg-ereceipt').value.trim(),
+      payment:document.getElementById('gg-epay').value,amount,
+      notes:document.getElementById('gg-enotes').value.trim()
+    });
+    put(K.e,a);close('gg-expense-modal');render();syncPush(true);
+  }
+  function delExpense(id){
+    if(confirm('Delete this expense?')){
+      put(K.e,expenses().filter(x=>String(x.id)!==String(id)));render();syncPush(true);
+    }
+  }
+
+  return {open,close,openPurchase,addLine,changeLine,qtyLine,costLine,removeLine,savePurchase,openSupplier,saveSupplier,openExpense,saveExpense,delExpense,render};
+})();
+window.GG=GG;
+window.ggReportRange='today';
+GG.render();
+fillSettingsForm();
+renderPaymentSummary();
+</script>
+
+<script>
+/* Google Sheets sync — one consistent payload for all app data */
+let syncBusy=false;
+
+function allLocalData(){
+  return {
+    products:normalizeProducts(readJSON(GGK.products,[])),
+    sales:normalizeSales(readJSON(GGK.sales,[])),
+    purchases:readJSON(GGK.purchases,[]),
+    expenses:readJSON(GGK.expenses,[]),
+    suppliers:readJSON(GGK.suppliers,[])
+  };
+}
+const GG_SYNC_QUEUE_KEY='gg_sync_queue_v1';
+function readSyncQueue(){try{const q=JSON.parse(localStorage.getItem(GG_SYNC_QUEUE_KEY)||'[]');return Array.isArray(q)?q:[]}catch(e){return[]}}
+function writeSyncQueue(q){localStorage.setItem(GG_SYNC_QUEUE_KEY,JSON.stringify(q.slice(-5)));updateSyncQueueCard();}
+function queueSnapshot(){
+  const q=readSyncQueue();
+  q.push({queuedAt:new Date().toISOString(),payload:{action:'saveAll',...allLocalData()}});
+  writeSyncQueue(q);
+}
+function updateSyncQueueCard(){
+  const n=readSyncQueue().length;
+  const el=document.getElementById('sync-queue'); if(el)el.textContent=n?`${n} pending`:'0 pending';
+}
+async function sendSnapshot(payload,sheetUrl){
+  await fetch(sheetUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+  return true;
+}
+async function flushSyncQueue(){
+  const s=loadSettings();
+  if(!s.sheetUrl || !navigator.onLine || syncBusy)return false;
+  const q=readSyncQueue(); if(!q.length){updateSyncQueueCard();return true;}
+  syncBusy=true;
+  try{
+    // Send the newest complete snapshot. Older queued snapshots are obsolete because
+    // every payload contains the complete local database state.
+    await sendSnapshot(q[q.length-1].payload,s.sheetUrl);
+    localStorage.setItem('gg_last_push',new Date().toLocaleTimeString());
+    writeSyncQueue([]);
+    syncStatus('✓ Offline changes synced to Google Sheets.');
+    updateSyncCards();
+    return true;
+  }catch(e){
+    console.error(e); syncStatus('⚠ Sync still pending — will retry when online.'); return false;
+  }finally{syncBusy=false;}
+}
+async function syncPush(silent=false){
+  const s=loadSettings();
+  if(!s.sheetUrl){if(!silent)syncStatus('⚠ Save your Apps Script Web App URL first.');return false;}
+  const payload={action:'saveAll',...allLocalData()};
+  if(!navigator.onLine){queueSnapshot();if(!silent)syncStatus('⚠ Offline — saved locally. It will sync automatically when online.');return false;}
+  if(syncBusy)return false;
+  syncBusy=true; syncStatus('⏳ Pushing data to Google Sheets...');
+  try{
+    await sendSnapshot(payload,s.sheetUrl);
+    const now=new Date().toLocaleTimeString();
+    localStorage.setItem('gg_last_push',now);
+    writeSyncQueue([]);
+    syncStatus('✓ Synced — data sent at '+now);
+    updateSyncCards();
+    return true;
+  }catch(e){
+    console.error(e);
+    queueSnapshot();
+    syncStatus('⚠ Internet unavailable — changes queued for automatic sync.');
+    updateSyncCards();
+    return false;
+  }finally{syncBusy=false;}
+}
+async function syncPull(){
+  const s=loadSettings();
+  if(!s.sheetUrl){alert('Paste and save your Google Apps Script Web App URL first.');return;}
+  if(!navigator.onLine){alert('You are offline.');return;}
+  if(!confirm('Pulling will replace this device\'s current local data with the data returned by Google Sheets. Continue?'))return;
+  try{
+    const r=await fetch(s.sheetUrl+'?action=getAll',{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    if(!d || typeof d!=='object')throw new Error('Invalid response');
+    if(Array.isArray(d.products))writeJSON(GGK.products,normalizeProducts(d.products));
+    if(Array.isArray(d.sales))writeJSON(GGK.sales,normalizeSales(d.sales));
+    if(Array.isArray(d.purchases))writeJSON(GGK.purchases,d.purchases);
+    if(Array.isArray(d.expenses))writeJSON(GGK.expenses,d.expenses);
+    if(Array.isArray(d.suppliers))writeJSON(GGK.suppliers,d.suppliers);
+    products=normalizeProducts(readJSON(GGK.products,[]));
+    sales=normalizeSales(readJSON(GGK.sales,[]));
+    if(window.GG)GG.render();
+    renderAll();
+    const now=new Date().toLocaleTimeString(); localStorage.setItem('gg_last_pull',now); syncStatus('✓ Pull successful — data loaded at '+now); updateSyncCards();
+  }catch(e){
+    console.error(e);
+    syncStatus('Pull failed — local data was not replaced.');
+  }
+}
+function updateSyncCards(){
+  const s=loadSettings();
+  const c=document.getElementById('sync-connection'); if(c)c.textContent=s.sheetUrl?'Connected / URL saved':'Not configured';
+  const p=document.getElementById('sync-last-push'); if(p)p.textContent=localStorage.getItem('gg_last_push')||'—';
+  const q=document.getElementById('sync-last-pull'); if(q)q.textContent=localStorage.getItem('gg_last_pull')||'—';
+}
+async function testSheetConnection(){
+  const s=loadSettings();
+  if(!s.sheetUrl){syncStatus('⚠ Save your Web App URL first.');return;}
+  syncStatus('⏳ Testing Google Sheets connection...');
+  try{
+    const r=await fetch(s.sheetUrl+'?action=getAll&ts='+Date.now(),{cache:'no-store'});
+    const d=await r.json();
+    if(d&&d.ok){syncStatus('✓ Connection working. Google Sheets database is reachable.');updateSyncCards();}
+    else throw new Error('Invalid response');
+  }catch(e){console.error(e);syncStatus('✕ Connection test failed.');}
+}
+updateSyncCards();
+updateSyncQueueCard();
+window.addEventListener('online',()=>{flushSyncQueue();});
+</script>
+
+<script>
+/* Final Sale Type click safeguard */
+(function(){
+  function bindSaleTypeButtons(){
+    const retail=document.getElementById('type-retail');
+    const wholesale=document.getElementById('type-wholesale');
+    if(!retail || !wholesale) return;
+
+    [retail,wholesale].forEach(btn=>{
+      btn.type='button';
+      btn.style.pointerEvents='auto';
+      btn.style.position='relative';
+      btn.style.zIndex='2';
+    });
+
+    retail.addEventListener('click',function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      if(typeof setSaleType==='function') setSaleType('retail');
+    });
+
+    wholesale.addEventListener('click',function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      if(typeof setSaleType==='function') setSaleType('wholesale');
+    });
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',bindSaleTypeButtons,{once:true});
+  }else{
+    bindSaleTypeButtons();
+  }
+})();
+</script>
+<style>
+/* Sale Type must remain clickable in both themes. */
+.toggle-group{
+  position:relative;
+  z-index:5;
+}
+.toggle-group button{
+  position:relative;
+  z-index:6;
+  pointer-events:auto !important;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+[data-theme="dark"] .toggle-group button{
+  background:var(--card);
+  color:var(--text);
+  border-color:var(--border);
+}
+[data-theme="dark"] .toggle-group button.active{
+  background:var(--primary);
+  color:#fff;
+  border-color:var(--primary);
+}
+</style>
+
+<script id="mobile-hamburger-script">
+(function(){
+  const btn=document.getElementById('mobile-menu-btn');
+  const sidebar=document.querySelector('.sidebar');
+  const backdrop=document.getElementById('mobile-backdrop');
+  if(!btn||!sidebar||!backdrop)return;
+  function isMobile(){return window.matchMedia('(max-width: 900px)').matches}
+  function closeMenu(){
+    sidebar.classList.remove('menu-open');
+    backdrop.classList.remove('show');
+    btn.classList.remove('is-open');
+    btn.setAttribute('aria-expanded','false');
+    btn.setAttribute('aria-label','Open menu');
+    document.body.classList.remove('menu-open');
+  }
+  function toggleMenu(){
+    if(!isMobile())return;
+    const open=!sidebar.classList.contains('menu-open');
+    sidebar.classList.toggle('menu-open',open);
+    backdrop.classList.toggle('show',open);
+    btn.classList.toggle('is-open',open);
+    btn.setAttribute('aria-expanded',String(open));
+    btn.setAttribute('aria-label',open?'Close menu':'Open menu');
+    document.body.classList.toggle('menu-open',open);
+  }
+  btn.addEventListener('click',toggleMenu);
+  backdrop.addEventListener('click',closeMenu);
+  sidebar.querySelectorAll('.nav-btn[data-tab]').forEach(function(nav){
+    nav.addEventListener('click',function(){setTimeout(closeMenu,80)});
+  });
+  window.addEventListener('resize',function(){if(!isMobile())closeMenu()});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMenu()});
+})();
+</script>
+
+<div id="pwa-online-status">● Online</div>
+<button id="pwa-install-btn" type="button">Install AKOYA POS</button>
+<script id="pwa-script">
+(function(){
+  const installBtn=document.getElementById('pwa-install-btn');
+  const status=document.getElementById('pwa-online-status');
+  let deferredPrompt=null;
+  function updateOnline(){
+    const online=navigator.onLine;
+    status.textContent=online?'● Online':'● Offline';
+    status.classList.toggle('offline',!online);
+  }
+  updateOnline();
+  window.addEventListener('online',updateOnline);
+  window.addEventListener('offline',updateOnline);
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault(); deferredPrompt=e; installBtn.classList.add('show');
+  });
+  installBtn.addEventListener('click',async function(){
+    if(!deferredPrompt)return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt=null; installBtn.classList.remove('show');
+  });
+  window.addEventListener('appinstalled',function(){
+    deferredPrompt=null; installBtn.classList.remove('show');
+  });
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',function(){
+      navigator.serviceWorker.register('./service-worker.js').catch(function(err){console.warn('PWA service worker registration failed',err);});
+    });
+  }
+})();
+</script>
+</body>
+</html>
